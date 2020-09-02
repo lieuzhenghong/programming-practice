@@ -30,8 +30,10 @@ import itertools
 
 
 class Solution:
-    # The idea here is to precompute of possible pairs of a+b
-    # and for every element c in nums, find the complement
+    # The idea here is to precompute all possible pairs of a+b.
+    # Then iterate through again,
+    # and for every element c in nums, find the complement -c = a+b
+
     def threeSum(self, nums: List[int]) -> List[List[int]]:
         valid_triplets = []
         int_count = {}
