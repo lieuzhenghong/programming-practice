@@ -10,6 +10,11 @@ An input string is valid if:
     2. Open brackets must be closed in the correct order.
 
 Solved 2nd September 2020, 1400--1420 (20 minutes)
+
+== Comments from Wei Heng ==
+
+- Stack class is pointless (problem is already trivial)
+- eles doesn't sound good, use elements or elems instead
 '''
 import typing
 
@@ -51,14 +56,14 @@ class Solution:
             if c in ['(', '{', '[']:
                 stack.push(c)
             elif c in lookup_table:  # one of [')', '}', ']']
-                try:
+                if stack.eles:
                     top_ele = stack.top()
                     if top_ele != lookup_table[c]:
                         return False
                     else:
                         stack.pop()
-                except ValueError:
-                    return False
+                else:
+                    return False  # stack is prematurely empty
             else:
                 raise ValueError
 
