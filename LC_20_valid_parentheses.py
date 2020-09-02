@@ -15,6 +15,12 @@ Solved 2nd September 2020, 1400--1420 (20 minutes)
 
 - Stack class is pointless (problem is already trivial)
 - eles doesn't sound good, use elements or elems instead
+
+== Comments from Nic ==
+
+- should just do `return not stack.eles` at the last line
+- elem/elems is idiomatic
+
 '''
 import typing
 
