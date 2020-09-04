@@ -24,6 +24,24 @@ Attempted 2nd September 2020, 1500--1525 (25 minutes)
 TLE 278/313 cases, too fat of a solution
 Looked at the best solution and I should actually sort the input first
 and use three pointers, rather than trying to do what I did
+
+== Nick's comments ==
+
+if a not in triplet_int_count:
+                        triplet_int_count[a] = 1
+                    else:
+                        triplet_int_count[a] += 1
+
+replace with
+
+triple_int_count[a] = triplet_int_count.get(a, 0) + 1
+
+Use tuples!
+Dictionaries and Sets must have tuples as key, 
+in python only immutable types are hashable. 
+Lists are mutable reference types,
+so if you want to do a dictionary with key [1,2], tuple(l) it first
+
 '''
 
 import itertools
@@ -87,3 +105,54 @@ class Solution:
                         valid_triplets.append(sorted([a, b, c]))
         valid_triplets = sorted(valid_triplets)
         return list(valid_triplets for valid_triplets, _ in itertools.groupby(valid_triplets))
+
+
+'''
+# LC 15. 3 Sum
+
+Given an array nums of n integers, are there elements a, b, c in nums such
+that a + b + c = 0? Find all unique triplets in the array which gives the sum
+of zero.
+
+Note:
+
+The solution set must not contain duplicate triplets.
+
+Example:
+
+Given array nums = [-1, 0, 1, 2, -1, -4],
+
+A solution set is:
+[
+  [-1, 0, 1],
+  [-1, -1, 2]
+]
+'''
+
+
+class Solution:
+
+    def threeSum(self, nums: List[int]) -> List[List[int]]:
+        complements = {}
+        triplets = set()
+
+        def twoSum(nums: List[int], target: int):
+            # Returns all pairs of numbers in nums that add to target
+            # Have a dictionary of complements
+            #
+            doubles = set()
+            for num in nums:
+                complement = target - num
+                if complement in complements:
+                    doubles.add(tuple(num, complement))
+                complements[num] = complements.get(num, []).append(0)
+            return doubles
+
+        nums.sort()
+        for i, num in enumerate(reversed(nums)):
+            pairs = twoSum(nums[len(nums)-1-i:], -num)
+            for x, y in pairs:
+                triplet = tuple(sorted(num, x, y))
+                triplets.append(triplet)
+
+        return list(triplets)
