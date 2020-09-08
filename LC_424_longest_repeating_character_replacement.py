@@ -53,37 +53,42 @@ The substring "BBBB" has the longest repeating letters, which is 4.
 # Sliding window solution
 
 
-class Solution:
-    def maximumContiguousSubStringWithKHoles(self, s: str, k: int, c: str) -> int:
-        '''
-        Given a string AA0000A0A0A0AAA000A0A,
-        what is the maximum length of the contiguous substring with K holes?
-        In this case, if k = 3, and c = "A",
-        then the maximum length would be 9 (fill the 0s in the middle)
-        '''
-        left_ptr = 0
-        right_ptr = 0
-        holes_left = k
+class Solution():
+    def maximumContiguousSubstring(self, s, k, c):
+        # print(c)
+        l = 0
+        num_holes = 0
         max_length = 0
-        current_length = 0
-        if len(s) == 0:
-            return 0
-        if len(s) == 1:
-            return 1
-        while right_ptr <= len(s):
-            if k[left_ptr] != c:
 
-            elif k[right_ptr] != c:
-                if holes_left:
-                    holes_left -= 1
-                    le
-
-            else:
-                right_ptr += 1
-                current_length += 1
-                max_length = max(current_length, max_length)
-
-        pass
+        # Invariant: s[l:r+1] has <= k holes
+        for (r, char) in enumerate(s):
+            # print(l, r)
+            if s[r] != c:
+                # We've hit a hole
+                num_holes += 1
+                while (num_holes > k) and l <= r:
+                    # Move the left pointer to the right until string is valid.
+                    if s[l] != c:
+                        num_holes -= 1
+                    l += 1
+            max_length = max(r-l+1, max_length)
+        return max_length
 
     def characterReplacement(self, s: str, k: int) -> int:
-        pass
+        # print(s, k)
+        max_lengths = {}
+        for char in string.ascii_uppercase:
+            max_lengths[char] = self.maximumContiguousSubstring(s, k, char)
+
+        # print(f"A: {max_lengths['A']}, B: {max_lengths['B']}")
+
+        return max(max_lengths.values())
+
+
+def go(s, k):
+    sol = Solution()
+    print(sol.characterReplacement(s, k))
+
+
+go(s="ABAB", k=2)
+go(s="AABABBA", k=1)
