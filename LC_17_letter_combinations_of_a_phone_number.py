@@ -13,6 +13,8 @@ Example:
 Input: "23"
 Output: ["ad", "ae", "af", "bd", "be", "bf", "cd", "ce", "cf"].
 
+Completed September 8, 2020
+Easy question. 20 minutes done.
 '''
 
 from typing import List
