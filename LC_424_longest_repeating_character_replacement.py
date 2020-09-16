@@ -51,6 +51,7 @@ The substring "BBBB" has the longest repeating letters, which is 4.
 # AA0000A0A0A0AAA000A0A --> how do you get the largest contiguous array?
 # It's finding the largest contiguous array with k holes, effectively
 # Sliding window solution
+import string
 
 
 class Solution():
