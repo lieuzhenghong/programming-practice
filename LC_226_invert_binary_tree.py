@@ -68,16 +68,6 @@ class Solution:
         '''
         if not node:
             pass
-        '''
-        elif not node.left and not node.right:
-            pass
-        elif not node.right:
-            node.right = self.flipLeftAndRightChildren(node.left)
-            node.left = None
-        elif not node.left:
-            node.left = self.flipLeftAndRightChildren(node.right)
-            node.right = None
-        '''
         else:
             new_right = self.flipLeftAndRightChildren(node.left)
             node.left = self.flipLeftAndRightChildren(node.right)
