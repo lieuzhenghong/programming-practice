@@ -67,29 +67,25 @@ class Solution:
     def findMin(self, nums: List[int]) -> int:
         l = 0
         r = len(nums) - 1
-        # print(nums)
 
         while l <= r:
             mid = (l + r) // 2
-            # print(l, mid, r)
             if self.isMinimum(nums, mid):
                 return nums[mid]
-            elif nums[mid] >= nums[0] and nums[mid] > nums[r]:
-                # Two cases
-                # If the array has been rotated, then
-                # the mid element will be
-                # We are still before the minimum element
-                # The element must lie between mid (exclusive) and r (incl)
+            # Two cases (actually three).
+            # If the array has been rotated and we are before the minimum element
+            # then nums[mid] >= nums[0] and nums[mid] > nums[r].
+            # => The minimum must lie between mid (exclusive) and r (incl).
+            elif nums[mid] >= nums[0] and nums[mid] > nums[r]:  # This c
                 l = mid + 1
-                # But if the array has not been rotated,
-                # then nums[mid] <= nums[r]
-                # and mid must lie after the minimum element
-            else:  # nums[mid] < nums[0]:
-                # We are after the minimum element
-                # The element must lie between l and mid(exclusive)
+            # But if the array has not been rotated, or if array has been
+            # rotated and we are after the minimum element,
+            # then nums[mid] >= nums[0] AND nums[mid] <= nums[r] (array not rotated)
+            # or nums[mid] < nums[0] AND nums[mid] <= nums[r] (array rotated but we are after minimum element)
+            # Either way, we are after the minimum element
+            # => and hence the minimum must lie between l and mid (exclusive)
+            else:
                 r = mid - 1
-
-            # print(l, mid, r)
 
 
 def s(nums):
