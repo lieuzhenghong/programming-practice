@@ -22,6 +22,9 @@ Finish 1h25min
 # The overall complexity of my solution is:
 # - O(n) time,
 # - O(100000) -> O(1) space (since N is an integer within the range 0 to 100000)
+
+# ^ Update: this is a mistake, it is actually O(min(N, 2 billion)) -> O(1). 
+# Misread the range
 '''
 
 from collections import Counter
