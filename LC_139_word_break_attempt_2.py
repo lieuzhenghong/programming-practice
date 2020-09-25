@@ -62,6 +62,9 @@ class Solution:
             return True
 
         # Base cases checked: now do recursive call.
+        # Key recurrence relation is as follows:
+        # s can be decomposed if, for some i:
+        # s[:i+1] is a word AND s[i+1:] can be decomposed
         bools = []
         for i in range(len(s)):
             substring = s[:i+1]
@@ -70,9 +73,6 @@ class Solution:
                 bools.append(self.canBeDecomposed(s[i+1:], words, memo))
 
         memo[s] = any(bools)
-        # Key recurrence relation:
-        # s can be decomposed if, for some i:
-        # s[:i+1] is a word AND s[i+1:] can be decomposed
         return memo[s]
 
     def wordBreak(self, s: str, wordDict: List[str]) -> bool:
