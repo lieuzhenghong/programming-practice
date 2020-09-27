@@ -143,3 +143,8 @@ while queue:
         4 < new_range[0]
         return False
 '''
+
+'''
+Runtime: 36 ms, faster than 98.22% of Python3 online submissions for Validate Binary Search Tree.
+Memory Usage: 16.2 MB, less than 40.32% of Python3 online submissions for Validate Binary Search Tree.
+'''
