@@ -518,6 +518,9 @@ had no experience working with existing codebases as large as this.
 
 ### Brief background/motivation
 
+Inzura is an auto insurance startup. They collect GPS data on drivers using
+their
+
 ### What it was
 
 ### Why it was impressive/ why it was important
@@ -594,9 +597,23 @@ and
 
 ### Brief background/motivation
 
+I wrote this for my dad's civil engineering consultancy firm because he was
+complaining that making these reports took up too much time.
+He asked me to use AI/machine learning to identify building defects in a photo
+and I said I don't think I can do that.
+After talking to him and his engineers I realised that there was no need for
+any machine learning, the main bottleneck was that they were using really
+inefficient tools (Microsoft Excel and Word) to generate the building reports.
+So I built a custom app that streamlined their workflow greatly and saved them
+hundreds of engineer-hours a month: time taken to generate a report decreased by
+75-85%.
+
 ### What it was
 
-Inspector's Gadget is a bespoke desktop application written in ElectronJS that was custom-built for a civil engineering consulting firm. It streamlines the process of writing building inspection reports. Real-world usage reports show that it decreases the time taken to write a report by up to 85%.
+Inspector's Gadget is a bespoke desktop application written in ElectronJS
+that was custom-built for a civil engineering consulting firm. It streamlines
+the process of writing building inspection reports. Real-world usage reports
+show that it decreases the time taken to write a report by up to 85%.
 
 ### Why it was impressive/ why it was important
 
@@ -627,12 +644,52 @@ Application flow is as follows:
 The entire thing was built in JavaScript.
 I used Vue.js for building the front-end
 and Electron to package it as a desktop app for both Windows and Mac users.
+I used a library called localForage (local file storage)
+to store and export annotated floor plans
+so that engineers could share their work with each other.
 
-#### Interesting technical decisions I made?
+### Interesting technical decisions I made?
+
+I think I was considering Electron vs Qt and eventually settled on Electron
+just because I knew how to build UIs with HTML and I'd have to learn more stuff
+to be familiar with Qt. I was on a tight deadline of ~1 month to ship the app
+so I went with what I knew (more).
 
 ### Interesting technical challenges?
 
-So long I can't remember
+There were technical challenges relating to wrangling with the PDF generator
+library but I can't remember the specifics.
+
+The more interesting challenge was actually finding out what the user actually
+needed instead of what the users told me they needed.
+My dad first approached me asking me to do some machine learning system
+but I sat down with him and his other engineers to try and understand
+what their workflow was.
+
+And I realised that what they really needed was not any fancy ML feature
+. First, every photo taken was renamed in File
+Explorer. Then, the floor plan was tagged in Microsoft Word by manually
+creating Text Boxes and moving them to the desired spot. Finally, to generate
+the report, the engineers would paste the images one by one into the Word
+document. God forbid the engineer missed out one photo in the middle, as to
+insert the new photo all subsequent photos had to be cut-and-pasted one box
+down. (You can see an example in the image: the image A2-30 has been left
+out. That means all the images and text from A2-31 onwards have to be cut and
+pasted one box down to make space for the new image.)
+
+![](report.png)
+
+I also realised that discoverability is very important.
+I had added in some keyboard shortcuts but forgot to tell the engineers
+(I documented it in a README which---let's face it---nobody reads)
+and then the engineers complained that their work was mysteriously being wiped!
+I debugged for days but couldn't find the solution.
+
+It turned out that
+I had implemented something like Control-Shift-L to load the previous saved
+plan but this actually just overwrote whatever they were working on now.
+And some engineers must have pressed this somehow by accident.
+So I simply removed it and there were no more complaints.
 
 ### What mistakes did I make and what would I change if I were doing it now?
 
@@ -644,6 +701,8 @@ So long I can't remember
 ### What have I learned?
 
 - First time using Electron
+- First time building a desktop GUI app
+- The importance of talking to users and find out what they want
 
 ---
 
