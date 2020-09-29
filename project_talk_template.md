@@ -625,13 +625,19 @@ I also like the feeling of being able to create a piece of software all the way 
 
 #### Diagram
 
+No diagram
+
 #### Dataflow and stack
 
 Before understanding the application flow, you must first understand the
 process of generating a building inspection report.
 
-A building inspection report is done as follows:
-An engineer walks around the building and takes photos of all structural features and defects (if any). The engineer will then "tag" the floor plan---put labels on the floor plan to show where each photo was taken. Finally, the engineer will produce a PDF report which includes all the photos taken, a description of each photo, and a classification of the defect type.
+A building inspection report is done as follows: An engineer walks around the
+building and takes photos of all structural features and defects (if any).
+The engineer will then "tag" the floor plan---put labels on the floor plan to
+show where each photo was taken. Finally, the engineer will produce a PDF
+report which includes all the photos taken, a description of each photo, and
+a classification of the defect type.
 
 Application flow is as follows:
 
