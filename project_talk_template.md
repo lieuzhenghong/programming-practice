@@ -1,12 +1,13 @@
 ---
----
 title: Project talk template
 date: 25th September 2020
 ---
 
-# Introduction
+## Introduction
 
 I've confirmed the interview date with OGP on 7th October 2020, 4pm to 6pm.
+
+From the [OGP Interview Guide (GDocs link)](https://docs.google.com/document/d/1Y0X2hatsN-kbzVu9ICVJyeB67V1PyrqtOV7Cg94Btc4/edit):
 
 > We will be looking at your resume and getting you to share more about what
 > you have worked on in the past. We’re interested in depth instead of breadth,
@@ -42,9 +43,18 @@ So what I'm going to do:
    - favourite project?
    - tell me about a time you had a disagreement/made a mistake ...
 
+Ask them why they decided to join the company. Ask them what they think the
+company could improve at. Ask them about a time that they messed up and how
+it was handled. Ask them how they see themselves growing at this company in
+the next few years. Ask them what they wish someone would have told them
+before they joined. Ask them if they ever think about leaving, and if they
+were to leave, where they would go.
+
 ---
 
 ## Board game engine
+
+To make it super easy to create and play any board game
 
 ### Brief background/motivation
 
@@ -72,16 +82,67 @@ So what I'm going to do:
 
 ### Brief background/motivation
 
+During my one-month stint this summer with Inzura, I was tasked to perform
+clustering on around 3 million JSON files to identify different trip modalities
+(car/bus/plane).
 The first step in the data science pipeline is to gather and process data.
-We had about 3 million JSON files we needed to process and a serial solution
+Because we had about 3 million JSON files, a serial solution
 would take way too long. I wrote a parallel processing package using Ray
 that sped up the time taken to process all the files by ~12x.
 
+### What it was
+
+It's a parallel processing Python package that makes embarassingly parallel
+tasks embarassingly easy.
 The library automatically handles the distribution of tasks to processes.
 Because we didn't want to lose any progress if e.g. the machine failed, the
 library also saves your progress so you can stop and restart the job anytime,
-and logs all errors automatically. I have already extensively documented the
-library and how to use it elsewhere and will not repeat it here.
+and logs all errors automatically.
+
+### Why it was impressive/ why it was important
+
+It sped up the time taken to process all the files by ~12x,
+and because Inzura had a need for parallelising many other workflows like this--
+(also they wanted their cluster of hundreds of Raspis to use)
+this will come in very useful for their future data processing workflows
+
+### What was the architecture?
+
+The user writes a `config.yaml` file in lieu of a CLI that specifies
+how many processes to run, what the input and output folders are, etc.
+
+Then the package itself has two files: `jobbuilder` and `jobrunner`.
+
+Suppose we want to specify 12 parallel processes.
+The `jobbuilder` looks at all the JSON files, and does the "load balancing":
+essentially carving up all the files amongst the different 12 processes.
+The `jobrunner` then will run some user-defined function `f`
+on each of the files in parallel
+and will save the results in 12 different `.csv` files.
+
+#### Diagram
+
+NA
+
+#### Dataflow and stack
+
+This pipeline runs a function f on a large number of input files in parallel
+and logs the results into a CSV. It is made up of two files.
+
+The first file, jobbuilder.py, takes an input (source) directory and produces
+nodejobfile text files that tell each process which files to work on.
+
+Then the second file jobrunner.py spins up the processes. Each process looks
+at its nodejobfile text file, and works through the list. For each \$FILEPATH
+listed in nodejobfile, the process opens the file, runs some function f on
+that file, and appends the output to a .csv file.
+
+If the function successfully runs, an empty file called done.job is created
+in <$WORKING_DIR>/tracking/<$FILEPATH>/as a record of completion. If the
+function throws an exception, then an empty file called error.job is created
+in the directory instead. Keeping a record of file completion means that the
+processes can be terminated and restarted at any time without going through
+the same files again.
 
 config.yaml:
 
@@ -118,23 +179,96 @@ This will run the function count_fruits on all the .json files in
 source_path, and save the results as CSVs in output_path (one row per JSON
 file).
 
-### What it was
+### Interesting technical decisions I made?
 
-### Why it was impressive/ why it was important
-
-### What was the architecture?
-
-#### Diagram
-
-#### Dataflow and stack
-
-#### Interesting technical decisions I made?
+1. Whether or not to use the Ray library --- could have done something similar with Python's multiprocessing library
+   - KISS vs NIH
+   - Ray's logging features, good documentation, and
+     dashboard (useful for long-running jobs) won me over in the end
+2. How abstract do we want to go --- do we make the library more abstract/powerful
+   (in the sense of being able to handle functions that follow a less strict contract)
+   at the expense of simplicity?
+   - Something like MapReduce is very general
+   - In the end, I decided to go for simple and specific:
+     (forcing a particular kind of workflow). I did this because I didn't just
+     want to badly reimplement MapReduce.
 
 ### Interesting technical challenges?
 
+Not so much a technical challenge, more of a deliberate technical decision.
+
+The user-defined function `f` is very restrictive:
+
+> The function you call must take as input an absolute filepath to the file.
+> It must return a Dictionary that will be passed to csv.DictWriter.
+> Furthermore, every Dictionary object returned must have the same keys. If it
+> is not able to return such a Dictionary, it must raise an Exception.
+
+Note that the function can't take any other arguments apart from the filepath
+to the file.
+(there is no state you can pass to the function)
+
+While it would be easy to do so I elected not to do this because this would
+open up "wrong" ways to use the package,
+and users would have to understand what kind of arguments you can pass and
+
+There was a very interesting and weird bug that I found
+where for some reason the first row of the CSV was being written twice.
+
+After some debugging I saw that even after `csvWriter.writeRow`
+the filesize did not increase.
+
+And after even more debugging I saw that
+`os.stat`/`os.fstat` and `outfile.tell` gave different filesize results
+for some reason.
+
+```python
+(pid=963792) File size according to os.fstat(outfile.fileno()).st_size: 0
+(pid=963792) File size according to os.stat(outputfilepath).st_size: 0
+(pid=963792) File size according to outfile.tell: 0
+(pid=963792) Processed trip /home/lieu/dev/r3po/output_dir/0.results.csv in node 0.
+(pid=963792) File size according to os.fstat(outfile.fileno()).st_size: 0
+(pid=963792) File size according to os.stat(outputfilepath).st_size: 0
+(pid=963792) File size according to outfile.tell: 34
+(pid=963792) Processed trip /home/lieu/dev/r3po/output_dir/0.results.csv in node 0.
+(pid=963792) File size according to os.fstat(outfile.fileno()).st_size: 34
+(pid=963792) File size according to os.stat(outputfilepath).st_size: 34
+(pid=963792) File size according to outfile.tell: 46
+(pid=963792) Processed trip /home/lieu/dev/r3po/output_dir/0.results.csv in node 0.
+(pid=963792) File size according to os.fstat(outfile.fileno()).st_size: 46
+(pid=963792) File size according to os.stat(outputfilepath).st_size: 46
+(pid=963792) File size according to outfile.tell: 58
+(pid=963792) Processed trip /home/lieu/dev/r3po/output_dir/0.results.csv in node 0.
+(pid=963792) File size according to os.fstat(outfile.fileno()).st_size: 58
+(pid=963792) File size according to os.stat(outputfilepath).st_size: 58
+(pid=963792) File size according to outfile.tell: 68
+(pid=963792) Processed trip /home/lieu/dev/r3po/output_dir/0.results.csv in node 0.
+(pid=963792) File size according to os.fstat(outfile.fileno()).st_size: 68
+(pid=963792) File size according to os.stat(outputfilepath).st_size: 68
+(pid=963792) File size according to outfile.tell: 82
+```
+
+It turned out that `outfile.seek(0,2)` actually affects the result
+of `os.stat(outputfilepath)` and `os.fstat(...)`. This is quite unexpected
+behaviour because `os.stat(filepath).st_size` is supposed to return
+the "Size in bytes of a plain file" so why would it be affected by outfile.seek?
+It also means that [this accepted and top-rated SO answer](https://stackoverflow.com/questions/283707/size-of-an-open-file-object)
+is actually wrong.
+
 ### What mistakes did I make and what would I change if I were doing it now?
 
+I put the package up on a public GH repo to make it very easy to install
+(uploaded it to PyPi which allows it to be `pip3 install`ed)
+but I didn't clear it with the CEO first.
+I (incorrectly) assumed that since this was a general-purpose package
+with no sensitive company data it would be OK.
+But CEO understandably wanted to keep IP he was paying him for to himself.
+
 ### What have I learned?
+
+- How to build and deploy a package
+- Very niche bug on fstat and stat
+- Ask permission before deploying
 
 ---
 
@@ -278,6 +412,8 @@ had no experience working with existing codebases as large as this.
 ### What mistakes did I make and what would I change if I were doing it now?
 
 ### What have I learned?
+
+---
 
 ## Distributed Raspberry Pi cluster
 
