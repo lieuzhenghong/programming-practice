@@ -3,6 +3,8 @@ title: Project talk template
 date: 25th September 2020
 ---
 
+\pagebreak
+
 ## Introduction
 
 I've confirmed the interview date with OGP on 7th October 2020, 4pm to 6pm.
@@ -54,25 +56,146 @@ were to leave, where they would go.
 
 ## Board game engine
 
-To make it super easy to create and play any board game
-
 ### Brief background/motivation
+
+I like board games --- playing and designing them.
+During Covid 19, my friends and I wanted to prototype and playtest a
+board game together,
+but we couldn't find a good tool to do so. There were several tools online
+but they just didn't fit the bill.
+
+I wanted to build something that
+made it super easy to create and play any board game online with friends
+with no downloads or programming skill needed.
+Ideally you'd first specify a board game with a JSON file or with a GUI editor,
+then upload the game, then host a game and send your friends the link ---
+everything should be seamless.
 
 ### What it was
 
+The board game engine is made out of three main parts.
+
+First, it's the schema that allows anyone to specify
+and render any board game with just two JSON files.
+
+Second, it's the core multiplayer engine that synchronises player input
+and maintains an authoritative game state between all the different players.
+
+Lastly, it'll be the "supporting infrastructure": a database
+to allow players to upload JSON files, some front-end that allows players to
+host and join games, etc.
+
+I'm currently working with two fellow gamedevs I met during an online Game Jam.
+The first part (JSON schema) is completed, and we're almost done with the MVP
+of the second part.
+
 ### Why it was impressive/ why it was important
+
+This is a passion side project so progress is pretty slow.
+But I've done quite a lot of market research and I know that
+there's nothing like this in the market.
+In terms of web,
+the closest is something like Cockatrice/Lackey for multiplayer card games
+or Roll20 for Dungeons and Dragons, but these are not ideal for board games.
+So we're filling a small niche here --- the ability to prototype and playtest
+quickly is really useful for board game nerds.
 
 ### What was the architecture?
 
 #### Diagram
 
+![Board game engine architecture](board_game_engine_server_architecture.png)
+
+This is a client-server architecture. We have clients that send
+
+Right now, a single server handles both the HTTP requests and Websockets communication.
+For scale in the future, we would probably want to separate the server that
+serves the static assets and handles the HTTP GET/POST requests
+from the game server that does the heavy lifting of synchronising player input
+and game state over WebSockets.
+
 #### Dataflow and stack
+
+Because we're designing for web, the only real choice is Javascript.
+
+I decided to use TypeScript because I find types one of the most important things
+I use to reason about complicated code, especially complicated OOP code.
+With TypeScript I can define custom structs and interfaces and
+that makes writing class methods so much easier.
 
 #### Interesting technical decisions I made?
 
+It was actually very very fun to design the schema that allows us to represent
+any board game state. I guess you could kind of call it a domain-specific language
+in a way.
+
+It's useful to think think of a board game state as a state in a
+finite state automaton,
+and an action like drawing a card/flipping a card/playing a piece
+as a transition between one state to another.
+Then you need to think about what sort of things you need to have in the state.
+Eventually I settled on a 'entity/zone' dichotomy
+where the only possible transitions are:
+
+- Moving an entity from one zone to another
+- Changing an entity's state
+
+Pair programming is SUPER useful and I wish I'd done it earlier.
+It's incredibly useful for several reasons:
+
+1. A lot of the time, the problem with side projects is that I just lack motivation
+   to carry on. So pair programming works as a commitment device.
+2. When one person gets blocked the other can help. A lot of the time
+   one person has a faulty assumption that just block them from understanding a concept.
+   Through a process of argument and discussion these assumptions can be uncovered.
+
+Here's an example. The other collaborator is a very experienced data scientist
+but has no JS experience. He had an incorrect understanding of `async` and `await`
+(specifically, he didn't believe that `await` blocked execution)
+and thus he rewrote my code wrongly. But after the discussion we managed to solve it.
+
 ### Interesting technical challenges?
 
+Hardest technical challenge by far was doing real-time multiplayer.
+
+First of all you need to think about how to structure the GameState object
+and what you need to send to the server.
+
+Why? Because you need to think about latency.
+
+- How often should clients communicate with the server? We must ensure that the
+  server is not overloaded and is able to respond to all the actions in time.
+- If you don't allow clients to do anything until the server responds, it's going
+  to feel very laggy. But if you allow clients to do too much then you get
+  rubberbanding which also sucks.
+- How does the server adjudicate between two different conflicting action sets?
+- What happens if two players try to drag the same token at the same time?
+
+Another interesting challenge was trying to work with others who were not as
+technically experienced/didn't know the whole system as well as I did.
+I had to learn how to portion out tasks in a bite-sized manner with defined
+inputs and outputs so that contributors don't have to know the whole system
+to contribute. This also forced me to go back and refactor in order to be able
+to do that so it definitely increased the quality of my code.
+
+Here's an example. We want a menu to display when we right-click on an entity.
+This needs to access the GameState and Entity object to know what entity is being
+clicked and what sort of menu to display and what function to call when a certain
+menu option is clicked etc.
+
+To write this function you need to know GameState, Entity, State interfaces.
+What I had to do was refactor to hide all of this into a function, that simply
+receives an (x, y) Point and a custom MenuObject, and all the contributor
+had to do was `createDOMElement` according to the well-defined MenuObject.
+So now they only need to understand that one MenuObject interface and they can
+focus on that alone and they odn't have to worry about the rest --- well-encapsulated.
+
 ### What mistakes did I make and what would I change if I were doing it now?
+
+Be more proactive when looking for blockers that other people are facing
+
+Absolutely do pair programming earlier: not just pair programming but pair
+understanding and pair reading documentation.
 
 ### What have I learned?
 
@@ -465,11 +588,21 @@ had no experience working with existing codebases as large as this.
 
 ## Bespoke building inspection software (Inspector's Gadget)
 
+Had written some thoughts on it [here](https://github.com/lieuzhenghong/inspectors-gadget/blob/master/what-i-learned.md)
+and
+[here](https://lieuzhenghong.com/projects/inspectors-gadget/)
+
 ### Brief background/motivation
 
 ### What it was
 
+Inspector's Gadget is a bespoke desktop application written in ElectronJS that was custom-built for a civil engineering consulting firm. It streamlines the process of writing building inspection reports. Real-world usage reports show that it decreases the time taken to write a report by up to 85%.
+
 ### Why it was impressive/ why it was important
+
+I really enjoy the idea of building software that helps someone streamline their workflow
+It's a good feeling to know that your software is being used by users
+I also like the feeling of being able to create a piece of software all the way from ideation to production; it gives me a sense of accomplishment
 
 ### What was the architecture?
 
@@ -477,13 +610,40 @@ had no experience working with existing codebases as large as this.
 
 #### Dataflow and stack
 
+Before understanding the application flow, you must first understand the
+process of generating a building inspection report.
+
+A building inspection report is done as follows:
+An engineer walks around the building and takes photos of all structural features and defects (if any). The engineer will then "tag" the floor plan---put labels on the floor plan to show where each photo was taken. Finally, the engineer will produce a PDF report which includes all the photos taken, a description of each photo, and a classification of the defect type.
+
+Application flow is as follows:
+
+1. Enginer has a floor plan and a folder full of photos
+2. Engineer uploads floor plan and photos
+3. Engineer clicks floor plan to assign a photo to that position on the floor plan
+4. Engineer goes to "Generate report" tab to describe each photo
+5. PDF automatically generated
+
+The entire thing was built in JavaScript.
+I used Vue.js for building the front-end
+and Electron to package it as a desktop app for both Windows and Mac users.
+
 #### Interesting technical decisions I made?
 
 ### Interesting technical challenges?
 
+So long I can't remember
+
 ### What mistakes did I make and what would I change if I were doing it now?
 
+- Talk to users more when building the app.
+  - e.g. the case of keyboard shortcuts, which ones users want and which ones
+    they dont
+- Observe how users use the app and use that to guide building new features
+
 ### What have I learned?
+
+- First time using Electron
 
 ---
 
