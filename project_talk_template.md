@@ -5,7 +5,7 @@ date: 25th September 2020
 
 \pagebreak
 
-## Introduction
+# Introduction
 
 I've confirmed the interview date with OGP on 7th October 2020, 4pm to 6pm.
 
@@ -53,6 +53,8 @@ before they joined. Ask them if they ever think about leaving, and if they
 were to leave, where they would go.
 
 ---
+
+# Projects I've done
 
 ## Board game engine
 
@@ -114,6 +116,38 @@ serves the static assets and handles the HTTP GET/POST requests
 from the game server that does the heavy lifting of synchronising player input
 and game state over WebSockets.
 
+```
+// Left-click an object to enter "drag" mode, then
+// move the mouse anywhere to move the entity's position.
+// Left-click again to drop the entity.
+// Note that this doesn't change the entity's zone.
+
+//             Change State Mode
+//                    ^
+//                    |
+//                    |
+// Base Mode --> Entity UI Mode -->  Change Position Mode
+//   |  ^             |
+//   |  |             |
+//   v  |             v
+// Drag mode    Change Zone mode
+
+// We will also have a ContextMenu that is generated
+// and probably also some flags like CurrentlyDraggingEntity
+// and EntityCurrentlyDragged
+
+//
+//                                ________________                _________
+//                                |               |               |        |
+// UI [posx, posy, LMB, RMB] ===> |    GameCore   | Action[] ===> | Server |
+//                                |_______________|          <=== |________|
+//                                        |
+//                                        | Action[]
+//                                        v
+//                                    GameState
+//
+```
+
 #### Dataflow and stack
 
 Because we're designing for web, the only real choice is Javascript.
@@ -171,6 +205,25 @@ Why? Because you need to think about latency.
 - How does the server adjudicate between two different conflicting action sets?
 - What happens if two players try to drag the same token at the same time?
 
+Event-based vs time-based loop:
+
+```
+// == Time-based loop (every 15ms?): ==
+// Client Core sends actions to Server Core from the action queue
+// Server Core accumulates and validates actions from all Client Cores
+// Server Core sends actions to Client Cores
+// Client Core applies actions to GameState
+// Client Core renders GameState
+
+// == Event-based loop: ==
+// on RightClick on Entity, Client Core generates Context UI
+// ClientCore responds to clicks on Context UI and generates ServerActions
+// on MouseMove or any other Click,
+// Client UI sends mouse positions/clicks to Client Core
+// Client Core converts mouse states to ServerActions
+// Both types of actions are pushed into an action queue
+```
+
 Another interesting challenge was trying to work with others who were not as
 technically experienced/didn't know the whole system as well as I did.
 I had to learn how to portion out tasks in a bite-sized manner with defined
@@ -198,6 +251,11 @@ Absolutely do pair programming earlier: not just pair programming but pair
 understanding and pair reading documentation.
 
 ### What have I learned?
+
+- How best to work with other collaborators
+- How to pair program
+
+\pagebreak
 
 ---
 
@@ -393,6 +451,8 @@ But CEO understandably wanted to keep IP he was paying him for to himself.
 - Very niche bug on fstat and stat
 - Ask permission before deploying
 
+\pagebreak
+
 ---
 
 ## MGGG flagship webapp
@@ -516,30 +576,149 @@ had no experience working with existing codebases as large as this.
 
 ## Bayesian SMS sender
 
+see full post [on my personal website](https://lieuzhenghong.com/2019/09/16/using-thompson-sampling-to-optimise-SMS-effectiveness/)
+
 ### Brief background/motivation
 
 Inzura is an auto insurance startup. They collect GPS data on drivers using
-their
+their mobile app and are able to see which drivers are "safe" vs
+"dangerous" --- this is extremely valuable data to insurers.
+
+Inzura had recently signed a big contract with
+Thailand's second largest insurer to rollout these "smart" data-driven plans.
+All was well and uptake of the new plan was excellent, but there was one problem---
+customers weren't downloading/installing/using the app.
+This meant that the insurer was deriving no benefit whatsoever from the new plan.
+The CEO gave us an ultimatum: make sure users start using the app or the deal is off.
+So I built a Bayesian SMS pipeline to nudge customers to install the app
+and after one month the number of active users went up by 25%.
+The CEO was happy and continued the contract with us.
 
 ### What it was
+
+I architected and built a system that programmatically sends SMSes and tracks each one to see if it has been clicked. I used the pipeline to conduct a behavioural economics experiment on ~2000 users to investigate the effect of loss-aversive framing on clickthrough rates. I used Bayesian statistics (Thompson sampling) to maximise the number of people who were reached by the optimal SMS.
 
 ### Why it was impressive/ why it was important
 
 ### What was the architecture?
 
+There are four key parts of this pipeline:
+
+    Inzura server that contained customer data
+    NGINX server to log clicked SMSes
+    PostgreSQL database to log customer data and status of all SMSes sent
+    Multi-armed-bandit code to calculate the optimal number of each SMS to send
+
 #### Diagram
 
 #### Dataflow and stack
 
-#### Interesting technical decisions I made?
+![](https://lieuzhenghong.com/img/sms_pipeloop/sms_pipeloop_0.png)
+
+![](https://lieuzhenghong.com/img/sms_pipeloop/sms_pipeloop_1.png)
+
+Step 1: The most important part is to measure the effectiveness of each SMS
+variant (neutral, positive or negative). I generate unique SMS IDs (3
+alphanumeric characters + checksum) for each SMS and append them to a
+template string, making a unique SMS string. I then make GET requests to the
+service that sends SMSes, the Ant API.
+
+Step 2 and 3:
+The Ant API sends an SMS to user who receives an unique SMS with a link at the end.
+Upon clicking it, the user is taken to a logging server on the inz.ai domain,
+which logs the ID of the SMS and redirects the user to the app store.
+
+Step 4: Every morning, I download the server's logs and process it,
+and update my PostgreSQL database of which SMSes have been clicked,
+analysing which SMSes were the most effective.
+I wrote the Thompson sampling code that would read the data
+from the database (the slot machine labeled "MAB"). It calculates the optimal
+number of each SMS to send given the SMSes' past performances.
+
+Repeat Step 1: send the SMSes once we know what SMSes to send/who to send them to.
+
+### Interesting technical decisions I made?
+
+KISS --- used NGinx server log (from the repurposed Inzura server
+as a "link shortener")
+rather than AWS Lambda function.
+
+Simple means manual, don't bother automating everything---
+I wanted to do everything automatically, but decided it wasn't worth the trouble.
+In the end I basically had to run the script every morning manually to pull
+customer data from Inzura's databases and pull server logs
+rather than having the Lambda function update my SQL database automatically.
+But this was an OK tradeoff to make and didn't take that long on my part anyway---
+just had to remember to run the script every morning.
+(Probably could have been done with a cronjob).
 
 ### Interesting technical challenges?
 
+The interesting technical challenge was mainly in architecting a complex
+system. It's challenging because there are so many parts:
+the SQL database, the SMS sender, the logging server, the multi-armed bandit,
+etc.
+It's kind of like thinking about the Lego parts you'll need to
+3D-print to build the rocket ship you have in mind. It was a good exercise to
+think about what parts I needed in the system and how they would talk to each
+other. (I guess this is what senior SWEs like Chris and David do in their
+sleep.) I've greatly simplified the architecture in my breezy
+explanation---the actual architecture I built has more moving parts, and it
+was quite challenging for me.
+
+There was also an interesting statistical challenge,
+to decide on the final multi-armed bandit algorithm.
+There are very many different bandit algorithms
+(UCB, epsilon-greedy, or just simple A/B testing)
+
 ### What mistakes did I make and what would I change if I were doing it now?
+
+Two mistakes:
+
+1. sending out wrong SMSes to customers due to not having a proper dry run function
+2. Putting too much pressure on myself to meet an arbitrary deadline
+
+On point one: I had written all the bits individually in various
+module files (which was good) and had a `main.py` to just pull
+these various bits of code together.
+The `main.py` did things like
+make the correct SQL queries, pull the logs from server, do the multi-armed bandit, generate the SMSes to be sent, and then actually send the SMSes
+
+Because I wrote the code in most of the modules to be idempotent;
+that is, calling the same function again and again would not result in any
+difference from just calling the function once.
+So what I did when I e.g. wanted to just sanity-check the list of
+customers was simply to comment out the function call that actually sent the
+SMSes. Because all the functions (apart from actually sending the SMSes)
+were idempotent I could safely do this.
+
+But I think I was a bit too cavalier with this because one day I did a dry run
+and realised to my horror that I had forgotten to comment out that final function
+call! So I sent the same customers the same SMSes twice and I recoiled in horror.
+I had to fess up to my boss but in the end it was OK apart from the wasted money
+and possibly annoying some customers. But I learned my lesson---whenever
+I'm dealing with a production system, I should be much more careful.
+In this case what I should have done at the very least was
+take the time to write a `--actually-send` command line argument
+so it would dry run by default and not rely on commenting blocks out and in.
+
+On point two:
+
+Boss really wanted to send out the first batch of SMSes by Friday noon
+(understandable because he was also under a lot of pressure by the Thai company CEO), and I tried my best but couldn't
+make the deadline, and I was feeling very stressed out and high-strung.
+But in the end my boss was very understanding and I realised that I had
+misinterpreted how important it was to him.
+He told me --- if it can't be done, it can't be done --- no need to cut corners
+or stress yourself out to try to do the impossible.
 
 ### What have I learned?
 
+See above.
+
 ---
+
+\pagebreak
 
 ## Distributed Raspberry Pi cluster
 
@@ -563,29 +742,137 @@ their
 
 ### What have I learned?
 
+\pagebreak
+
 ---
 
 ## Blocktrain (Blockchain demonstrator)
+
+Original post on site [here (summary)](https://lieuzhenghong.com/projects/blocktrain/)
+and [here (detail)](https://lieuzhenghong.com/2019/01/31/building-a-blocktrain/)
 
 ### Brief background/motivation
 
 ### What it was
 
+Over the summer of 2018 (June-Aug 2018), I built an automated,
+blockchain-connected model train diorama and an accompanying visualisation.
+The diorama shows how changes in the locations of goods can be added in
+real-time to the blockchain, ensuring an immutable and unforgeable chain of
+provenance. This exhibit is also interactive: members of the public can scan
+QR codes pasted on several shipping containers, and they'll see that good's
+location and history on their phones update in real time.
+
 ### Why it was impressive/ why it was important
+
+My boss was part of the group promoting industry adoption of blockchain. He
+wanted me to find some way to i) explain how the blockchain works, and ii)
+show how blockchain can be used in industry.
+
+I chose to showcase the supply chain, because this application is already
+being promoted by IBM and it would have more relevance to the industry
+experts my boss talks to.
+
+My boss was enamoured with the idea of a moving train, having seen a model
+train set at the Accenture HQ. So I had the task of finding out how to use a
+model train set to showcase the supply chain. After several iterations, I
+decided on the current diorama + blockchain visualisation.
 
 ### What was the architecture?
 
 #### Diagram
 
+![](https://lieuzhenghong.com/img/blockchain_project/blockchain_3.png)
+![](https://lieuzhenghong.com/img/blockchain_project/blockchain_1.png)
+![](https://lieuzhenghong.com/img/blockchain_project/blockchain_2.png)
+
 #### Dataflow and stack
+
+There are four main components of this diorama:
+
+- Hyperledger Blockchain and REST API (running on a DigitalOcean instance)
+- Train diorama (controlled by a Raspberry Pi)
+- Blockchain visualisation (running on the Raspberry Pi)
+- Asset tracker (served by the same DigitalOcean instance)
+
+Here's how it works. On the train are shipping containers with QR codes
+pasted on them. Scanning each QR code will pull up the asset tracker, a
+webpage that gives the real-time location and previous provenance of the good
+--- all stored immutably on the blockchain. As the train pulls up to a
+station, the goods are unloaded and sent to a different location (absent a
+robotic arm, I'm afraid one has to use his imagination for this).
+
+When this happens, each shipping container will update its location
+automatically. This is stored on the blockchain. I also built a blockchain
+visualisation so we can see new blocks being added in real-time.
+
+The blockchain visualisation is written from scratch with HTML Canvas, and
+runs on the Raspberry Pi. It polls the Hyperledger REST API to check for updates.
+
+The blockchain itself is being updated by the train diorama which is controlled
+by the Raspi.
+It constantly listens for a voltage change on any of the reed switches,
+and if there is, it toggles the reed switch,
+which stops the train (to simulate goods unloading/loading).
+It then makes a HTTP POST request to the Hyperledger blockchain REST API
+to update the locations of the goods on the train.
+
+And this is picked up by the blockchain visualisation during its polling.
 
 #### Interesting technical decisions I made?
 
+NA
+
 ### Interesting technical challenges?
+
+Actual technical execution not so hard.
+Difficult part was understanding how the blockchain worked and how best to explain
+the important part of blockchain in a simple and understandable way.
+
+Most difficult part was figuring out how to get the train to stop at the station
+and then start again after some time.
+I asked the guy who was selling the train for help and he said that this
+was a very advanced thing to want to do. He sold me this very expensive device
+and Jain (my RO) and I spent something like two days trying to figure it out.
+I considered many different other approaches: ultrasonic sensor, light sensor etc.
+
+And then serendipitously there was this colleague Cason who was passing by and I
+told him about the project and our difficulties.
+Immediately he said "use a reed switch". I had never even heard of a
+reed switch but apparently it's something that can increase or decrease voltage
+in the presence of the magnetic field.
+So what I did was attach a magnet to the side of the train and when the train
+passes by it causes the reed switch to change voltage,
+The Raspberry Pi detects the change in voltage and toggles the relay switch,
+which stops the train. The Raspi then waits for 30seconds and then toggles
+the relay switch back on again, causing the train to move again.
+This simulates a stop-start. See the following diagram (and there's a video
+on my website too
+[here](https://lieuzhenghong.com/img/blockchain_project/in_action.MOV)):
+
+![How the train diorama stops and starts](https://lieuzhenghong.com/img/blockchain_project/how_it_works.png)
+
+This was a beautiful solution---it worked perfectly
+and I am very grateful to Cason for suggesting it.
+It must have been trivial/obvious for someone who did EEE but I did PPE, so
+I'm very grateful.
 
 ### What mistakes did I make and what would I change if I were doing it now?
 
+NA
+
 ### What have I learned?
+
+Three main things I learned:
+
+1. How to build a train diorama
+   (this was very fun, got to play with acrylic water, fake trees, fake grass..)
+2. The theoretical understanding of how blockchain worked
+3. Always ask lots of different people for help and advice.
+   As mentioned, I was having trouble stopping and starting the train at the station.
+   And if I did not talk to Cason I would probably still be stuck.
+
+\pagebreak
 
 ---
 
@@ -619,7 +906,8 @@ show that it decreases the time taken to write a report by up to 85%.
 
 I really enjoy the idea of building software that helps someone streamline their workflow
 It's a good feeling to know that your software is being used by users
-I also like the feeling of being able to create a piece of software all the way from ideation to production; it gives me a sense of accomplishment
+I also like the feeling of being able to create a piece of software
+all the way from ideation to production; it gives me a sense of accomplishment
 
 ### What was the architecture?
 
@@ -716,20 +1004,134 @@ So I simply removed it and there were no more complaints.
 
 ### Brief background/motivation
 
+I completed a computer architecture course called NAND 2 Tetris
+in order to self-study CS. This course started with
+constructing elementary logic gates all the way
+through creating a fully functioning general purpose computer.
+One of the projects was to use the high-level language you designed
+to build a program. In keeping with the title of the course, I decided to build
+a game.
+
 ### What it was
+
+![Dropship Chess](https://lieuzhenghong.com/img/chess/dropship-chess.jpg)
+
+It's chess played on a 6x6 board where captured enemy pieces can be
+"airdropped" anywhere on the board in lieu of moving a piece, kind of like
+Shogi/Bughouse. White starts with two knights and Black with two bishops—so
+you have to capture the opponent's knights/bishops to get your own.
 
 ### Why it was impressive/ why it was important
 
+Cribbed from [here](<https://lieuzhenghong.com/moocs/#from-nand-to-tetris-(n2t)>):
+
+Best course ever: more on this in the future. Briefly, this is a
+project-based course that starts from the microscopic (NAND gates) and builds
+everything from there.
+
+From NAND gates you first construct elementary logic gates. From those you
+build multiplexers and adders, which combine together to form ALU, CPU, RAM,
+ROM, and you have a computer.
+
+So now you have a computer: the next step is to write software for it. You
+start off by writing machine code, but that's very unwieldy: Nisan and
+Shocken thus give you an assembly language spec and you write an assembler
+that converts assembly code to machine code. Obviously assembly code is not
+ideal either, so you again climb the ladder of abstraction and build a
+stack-based virtual machine (and yes, that means writing VM code, then
+writing code that parses VM code into assembler).
+
+You climb again and build a parser and lexer to compile a high-level
+(something like C) language called Jack into that VM code. Now that you've
+built that high-level language you can then write OS functions (drawing
+images on the screen, arithmetic, etc.) and use those functions to write
+games on it --- games that include Tetris! (Hence the title).
+
+The beautiful, genius, sublime part is that you've built every single rung of
+the ladder (from electrical circuits to high-level language) and you just get
+such a great understanding (and appreciation) for all those previous layers.
+It's a bit like those videos which start from a grain of sand and zoom out to
+an image of the Earth.
+
 ### What was the architecture?
+
+NA
 
 #### Diagram
 
+NA
+
 #### Dataflow and stack
+
+NA
 
 #### Interesting technical decisions I made?
 
+NA
+
 ### Interesting technical challenges?
+
+The entire course was very hard: writing the Jack Compiler
+was by far the hardest thing.
+But also building the game was hard.
+The way that graphics are drawn was such a pain.
+
+First of all, Jack is a "high level language" in the same way that C is a
+high level language, so lots of things were quite painful. For instance,
+it does not support multiple array assignment, so in order to do something like
+`let x = [1,2,3]` you instead have to write
+
+```
+let x = Array.new(3)
+x[0] = 1
+x[1] = 2
+x[2] = 3
+```
+
+Also, pixels are drawn on the screen using 16-bit integers,
+where 0 = 16 white pixels and -1 = 16 black pixels.
+To draw the sprites of my chess game I
+had to figure out the pixel calculations manually. You can see it in
+SpriteSheet.jack but it sort of looks like this:
+
+```javascript
+let WPW[0]  = 0;
+let WPW[1]  = 0;
+let WPW[2]  = 0;
+let WPW[3]  = -16384;
+let WPW[4]  = 12288;
+let WPW[5]  = 4096;
+...
+let WPW[61] = 1023;
+let WPW[62] = 0;
+let WPW[63] = 0;
+```
 
 ### What mistakes did I make and what would I change if I were doing it now?
 
+I should have used Python's abstract syntax tree library (ast) to
+parse the code and convert it into XML but I had no idea that ast even existed
+when I did the course. So I had to generate XML "manually" in the program
+which was very very hard.
+
+I would actually love to revisit these assignments to rewrite them
+in a more concise and beautiful fashion.
+
 ### What have I learned?
+
+Lots of stuff about computer architecture. I really got the 'big picture'
+from this course and although I've forgotten a lot of the details,
+the high-level understanding has stuck with me. It's really demystified
+how computers work "under the hood" and I think it's one of the best courses
+I've ever done.
+
+\pagebreak
+
+# My strengths and weaknesses
+
+# Questions to ask
+
+- What's your favourite thing about working for OGP?
+- What do you dislike most about OGP?
+- What do you wish someone had told you before you joined OGP?
+- Do you ever think of leaving? If so, where would you go?
