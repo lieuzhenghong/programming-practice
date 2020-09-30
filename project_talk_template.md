@@ -724,23 +724,93 @@ See above.
 
 ### Brief background/motivation
 
+TODO
+
 ### What it was
+
+I calculated average traffic speeds of a sample of 50,000 trips in the UK.
 
 ### Why it was impressive/ why it was important
 
+enable hitherto-impossible data queries for Inzura
+
 ### What was the architecture?
+
+Apache Spark running on a Raspi cluster.
+Some of the cluster nodes were running a PostgreSQL database.
 
 #### Diagram
 
 #### Dataflow and stack
 
+The code does the following:
+
+- Read a JSON file onto the Raspi
+- Extract all the roads and velocities from the JSON file (Map step)
+- Combine all the roads and find the average velocities from all the JSON files (Reduce step)
+- Saves it into a single CSV file (the coalesce step). This step is optional
+  (and in fact is probably not recommended when the data set gets larger). I
+  did it to make it easier to visualise in QGIS.
+
 #### Interesting technical decisions I made?
 
+The first problem was that there were too many queries: over 140,000 queries,
+and it would take too long.
+So I made two main optimisations.
+
+First of all, I batched up the queries (instead of querying SELECT \* FROM
+streets WHERE link_ID = linkid, do WHERE link_ID IN {array_string}) because I
+knew that latency would be the primary bottleneck. This gave a huge speedup:
+making 10,000 queries (without caching) only took about 1.2 seconds. To give
+a comparison, measured round-trip time was about 0.1s (100ms); if I had made
+140,000 individual queries, this would have taken 14,000 seconds (4 hours!),
+and I was able to do all the queries in 14 seconds.
+
+Second, I knew that the linkIDs were indexed in the database, and so I made
+sure to sort the linkIDs before batching and sending them to maximise the
+probability of a cache hit.
+
 ### Interesting technical challenges?
+
+Configuring the cluster was by far the hardest part of this project. Any
+instructions I could find for setting up a Spark cluster were either
+incomplete, out of date, or incorrect. It took Richard, Chris and I three
+full days to set everything up. Eventually I heavily modified this MinIO
+cookbook and successfully deployed Spark on the 16 worker Raspis:
+
+It was also very mind-bending to learn functioning programming principles
+in Martin Odersky's course.
+I gained the necessary knowledge to do this data analysis project by working
+through part of the Functional Programming in Scala Specialisation. I
+finished the courses Functional Programming Principles in Scala, Parallel
+Programming and Big Data Analysis with Scala and Spark. The last course was
+the most directly relevant to this project but I found the first course
+incredibly helpful for learning Scala (and the functional programming
+paradigm), and the third course for reasoning about parallel programs. Both
+courses helped me appreciate why Scala is a good language for data
+analysis---many of the functional abstractions of mapping over an iterable of
+some sort carry over almost directly to distributed computing.
 
 ### What mistakes did I make and what would I change if I were doing it now?
 
 ### What have I learned?
+
+Scala, Spark and distributed computing were completely new to me, and I had a
+great time learning them. Learning about the abstractions of functional
+programming expanded my mind. For instance, I had heard about monoids and
+monads before but I only now understand their significance. Something that
+really clicked for me was an explanation of how monoids map easily to
+parallel programming, due to their associativity and identity.
+
+Spark was cool as well. There were many helpful tips in the course about
+optimising one's Spark program (always try to use Pair RDDs/Datasets, avoid
+shuffles whenever possible, minimise the data sent over the network, using
+range partitioning...) but sadly none of them were useful for this project.
+
+It was difficult trying to get Spark working on the Raspberry Pi cluster---in
+part because not many people have done it---but I'm pleased to have cracked
+this tough nut. In fact the project made me want to build my own Raspi
+cluster...
 
 \pagebreak
 
