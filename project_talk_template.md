@@ -60,22 +60,23 @@ were to leave, where they would go.
 
 ### Brief background/motivation
 
-I like board games --- playing and designing them.
-During Covid 19, my friends and I wanted to prototype and playtest a
-board game together,
-but we couldn't find a good tool to do so. There were several tools online
-but they just didn't fit the bill.
+I like playing and designing board games.
+During Covid 19, I wanted to prototype and playtest a
+board game with my friends,
+but I couldn't find a good tool to do so.
 
 I wanted to build something that
 made it super easy to create and play any board game online with friends
 with no downloads or programming skill needed.
-Ideally you'd first specify a board game with a JSON file or with a GUI editor,
-then upload the game, then host a game and send your friends the link ---
+You specify a board game with a JSON file or with a GUI editor.
+You can then immediately host that game and send your friends the link ---
 everything should be seamless.
 
 ### What it was
 
 The board game engine is made out of three main parts.
+
+![Board game engine architecture](board_game_engine_server_architecture.png)
 
 First, it's the schema that allows anyone to specify
 and render any board game with just two JSON files.
@@ -108,7 +109,9 @@ quickly is really useful for board game nerds.
 
 ![Board game engine architecture](board_game_engine_server_architecture.png)
 
-This is a client-server architecture. We have clients that send
+This is a client-server architecture. Clients send prospective actions
+(e.g. move an object, change an object's state etc.) to the server over WebSockets
+. The server does conflict resolution and returns the authoritative set of actions.
 
 Right now, a single server handles both the HTTP requests and Websockets communication.
 For scale in the future, we would probably want to separate the server that
@@ -204,6 +207,8 @@ Why? Because you need to think about latency.
   rubberbanding which also sucks.
 - How does the server adjudicate between two different conflicting action sets?
 - What happens if two players try to drag the same token at the same time?
+- What happens if one client lags out? Because the server is sending deltas,
+  it needs to also have a function to send the full game state to resynchronise
 
 Event-based vs time-based loop:
 
@@ -652,6 +657,14 @@ But this was an OK tradeoff to make and didn't take that long on my part anyway-
 just had to remember to run the script every morning.
 (Probably could have been done with a cronjob).
 
+There was also an interesting statistical decision,
+to decide on the final multi-armed bandit algorithm.
+Should I use simple A/B testing, or a multi-armed bandit algorithm?
+And even between MABs,
+there are very many different bandit algorithms
+(UCB, epsilon-greedy, Thompson sampling).
+In the end I used Thompson sampling because of ...
+
 ### Interesting technical challenges?
 
 The interesting technical challenge was mainly in architecting a complex
@@ -665,11 +678,6 @@ other. (I guess this is what senior SWEs like Chris and David do in their
 sleep.) I've greatly simplified the architecture in my breezy
 explanation---the actual architecture I built has more moving parts, and it
 was quite challenging for me.
-
-There was also an interesting statistical challenge,
-to decide on the final multi-armed bandit algorithm.
-There are very many different bandit algorithms
-(UCB, epsilon-greedy, or just simple A/B testing)
 
 ### What mistakes did I make and what would I change if I were doing it now?
 
@@ -1031,7 +1039,8 @@ but I sat down with him and his other engineers to try and understand
 what their workflow was.
 
 And I realised that what they really needed was not any fancy ML feature
-. First, every photo taken was renamed in File
+but rather just a way to streamline their workflow.
+First, every photo taken was renamed in File
 Explorer. Then, the floor plan was tagged in Microsoft Word by manually
 creating Text Boxes and moving them to the desired spot. Finally, to generate
 the report, the engineers would paste the images one by one into the Word
