@@ -3,18 +3,18 @@
 I'm Zhenghong and I've just graduated from the University of Oxford
 where I read Philosophy, Politics, and Economics.
 Despite what my degree might suggest,
-I've always been incredibly interested in CS and so I've done courses
+I've always been incredibly interested in computer science and so I've done courses
 in algos and DS, computer architecture, functional programming
 and so on.
 
-In a previous engagement I built an Electron app for a civil engineering firm
-which streamlined their building inspection process greatly and saved
-about 300 engineer-hours a month.
+Previously, I built an Electron app for a civil engineering firm
+which streamlined their building inspection process a lot.
+It saved about 300 engineer-hours a month.
 I found this very rewarding because I could see directly how my app improved
 their workflow and delighted the engineers.
 I also really like designing and building systems with measurable impact.
-In a previous internship I designed and built an automated SMS sender,
-which uses Bayesian statistics and unique tracking URLs to send optimal reminder
+In a previous internship I designed and built an automated SMS sender.
+It uses Bayesian statistics and unique tracking URLs to send optimal reminder
 messages.
 Seeing the number of active users increase day-by-day was really wonderful.
 
