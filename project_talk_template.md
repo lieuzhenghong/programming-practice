@@ -58,6 +58,15 @@ were to leave, where they would go.
 
 ## Board game engine
 
+### Project in five minutes: interesting engineering decisions.
+
+1. Efficient data structures
+   - how they affect events (engineering) and the user experience
+2. Not unnecessarily polluting the codebase with async functions
+3. (Two JSON files versus one)
+   - Server-side file that represents the abstract game state
+   - Client-side file (aesthetics) that maps entity states and zones to images
+
 ### Brief background/motivation
 
 I like playing and designing board games.
@@ -88,9 +97,41 @@ Lastly, it'll be the "supporting infrastructure": a database
 to allow players to upload JSON files, some front-end that allows players to
 host and join games, etc.
 
-I'm currently working with two fellow gamedevs I met during an online Game Jam.
+I recruited two fellow gamedevs I met during an online Game Jam
+and we've been working on it since.
+I personally designed the JSON data schema,
+I've been managing/coordinating/overseeing the project,
+enforcing good programming practices (moving to TypeScript)
+
+We have an artist/UI designer, Shan.
+He did the aesthetics of the UI and he did a mockup in HTML
+which I migrated to TypeScript.
+
+Another person cloned a networking repo which unfortunately didn't survive the
+migration to Typescript.
+We're slowly reintroducing and improving upon it, and we're doing that with
+pair programming.
+We sat down together to implement the netcode and I was in the driver seat
+because I had more experience with JavaScript/webdev.
+
 The first part (JSON schema) is completed, and we're almost done with the MVP
 of the second part.
+
+**If you have more experience in webdev, why did Joshua write the architecture?**
+
+This is a group project so we just decided to split up the work.
+Joshua would handle the back-end and I would handle the front-end.
+Because I had more experience I implemented my part before he did,
+and so we moved on to pairs programming to
+utilise both his architecture knowledge and my ability to code quickly in the language.
+
+**What I did:**
+I built the entire client side of the network:
+designed the JSON schema,
+reading in the JSON files,
+initialising the game state,
+handling actions,
+sending actions to the server.
 
 ### Why it was impressive/ why it was important
 
@@ -162,21 +203,110 @@ that makes writing class methods so much easier.
 
 #### Interesting technical decisions I made?
 
-It was actually very very fun to design the schema that allows us to represent
-any board game state. I guess you could kind of call it a domain-specific language
-in a way.
+##### We chose a particular schema for engineering reasons
 
-It's useful to think think of a board game state as a state in a
-finite state automaton,
-and an action like drawing a card/flipping a card/playing a piece
-as a transition between one state to another.
-Then you need to think about what sort of things you need to have in the state.
-Eventually I settled on a 'entity/zone' dichotomy
-where the only possible transitions are:
+We chose a data schema that works well from an engineering perspective
+that also works well for users.
+Zones are immutable and they have permissions attached to them that entities don't
+and they are also supposed to be rendered under entities
+They have properties that make sense to treat them together.
+For exmaple, we could have split "tokens", "cards", and "dice".
+Tokens have one state, cards have two states, dice have more than one state.
+That would give us some benefit: we wouldn't have to handle tokens' view permissions
+as they only ever have one state.
+But if we were to implement our rendering code, that would reduce to a switch case
+and introduce complexity.
 
-- Moving an entity from one zone to another
-- Changing an entity's state
+But in this case,
 
+there's almost no case that we need to loop over zones and entities together
+And even if we combined them we would _still_
+
+##### Using two JSON files rather than one
+
+The engineering gain is that the decisions we made about how to represent the data
+simplify our code rather than complicating it.
+
+We also separate the _game state_ from the _rendering_ of the game state
+: separate in code and also separate thematically
+
+**Why splitting up is worth the extra cost incurred to the user**
+
+1. It's not that much of a burden on the user
+2. Using different images to represent the same board state.
+   And one day we might extend the system to allow for different images
+   for the same board state. (e.g. in chess using different tilesets)
+   or using the same images for different game states
+   (using _import_ deck of cards)
+   and that config file might sit on the client end.
+
+---
+
+The main decision was to deliberately reduce the scope of the data schema.
+We don't try to represent the rules of any board game. Instead we simply
+represent entities, zones, and the states that those entities can have
+(e.g. face up vs face down).
+This allows us to represent any analogue board game at the cost of not being
+able to have AI/enforce game rules.
+The choice of the DSL and its syntax allows for an efficient representation of state
+and allows us to make transformations on that data easily.
+
+**How**: By not having the rules of the game be in in the data schema representing the game,
+it makes it much easier for end users to specify a game.
+
+**The representation of events**:
+Because we don't have any rules,
+we can make
+our events are "real data" and there's no arbitrary field,
+it makes them easy to work with and reason about
+
+I thought a lot about the user experience
+
+1. The objects in the data schema resemble the objects that users are used to
+   e.g. spaces (zones) and tokens (entities)
+2. We're able to curate the set of events to be small and finite
+   so that it is _minimally_ useful
+   and there is only ever one event to perform a certain action
+
+One example: if we didn't have zones but we represented everything as entities
+then the set of events that you would need to deal with would be much larger
+And there would be more "redundancy" to tease out.
+If a token is in a zone, only certain players can see and move it.
+
+If two entities connect and one of them is this kind of entity...
+
+Our engineering contructs match ideas that players/builders use themselves.
+Abstractions are similar to the abstractions that players/builders use.
+Like Zones and Entities and Players map well to things that players
+already intuitively understand.
+
+Simple but extensible architecture
+Keep the game state minimal and easy to work with --- make it as easy
+as possible for the player/builder to feed in the data structure.
+
+---
+
+##### Handling Promises in a "wrong" way
+
+What's interesting is how to _initialise_ and handle Promises in our code
+resolving promises in global scope
+
+Immediately resolving promises is usually the wrong decision but here it's
+the right one
+Conventional wisdom is to leave that method as a promise
+and resolve them in other method calls. But here we made the `init` function
+blocking instead before allowing any other methods to be called.
+
+The point is that we were able to isolate the Promise object into one singular
+method call (boardGameInit) or something.
+The disadvantage is an optimisation loss because it now blocks.
+But what we gain as a result is that the rest of our codespace can be synchronous
+and we don't have to worry about promise handling in the rest of our codebase
+which simplifies development greatly --- not polluting the codebase.
+
+---
+
+Another decision I made: pair programming.
 Pair programming is SUPER useful and I wish I'd done it earlier.
 It's incredibly useful for several reasons:
 
@@ -190,6 +320,12 @@ Here's an example. The other collaborator is a very experienced data scientist
 but has no JS experience. He had an incorrect understanding of `async` and `await`
 (specifically, he didn't believe that `await` blocked execution)
 and thus he rewrote my code wrongly. But after the discussion we managed to solve it.
+
+---
+
+**Why do we have a time-based update model?**
+
+Let's say the server passes the client 80 events at a time.
 
 ### Interesting technical challenges?
 
@@ -592,12 +728,8 @@ their mobile app and are able to see which drivers are "safe" vs
 Inzura had recently signed a big contract with
 Thailand's second largest insurer to rollout these "smart" data-driven plans.
 All was well and uptake of the new plan was excellent, but there was one problem---
-customers weren't downloading/installing/using the app.
-This meant that the insurer was deriving no benefit whatsoever from the new plan.
-The CEO gave us an ultimatum: make sure users start using the app or the deal is off.
-So I built a Bayesian SMS pipeline to nudge customers to install the app
-and after one month the number of active users went up by 25%.
-The CEO was happy and continued the contract with us.
+customers weren't using the mobile app.
+So I built a system to nudge customers to install the app.
 
 ### What it was
 
@@ -605,14 +737,17 @@ I architected and built a system that programmatically sends SMSes and tracks ea
 
 ### Why it was impressive/ why it was important
 
+- Increased number of active users by 25% in a month
+- Got the CEO of the company to renew the contract with Inzura
+
 ### What was the architecture?
 
 There are four key parts of this pipeline:
 
-    Inzura server that contained customer data
-    NGINX server to log clicked SMSes
-    PostgreSQL database to log customer data and status of all SMSes sent
-    Multi-armed-bandit code to calculate the optimal number of each SMS to send
+1.  Inzura server that contained customer data (so we know who is using the app)
+2.  NGINX server to log clicked SMSes
+3.  PostgreSQL database to log customer data and status of all SMSes sent
+4.  Multi-armed-bandit code to calculate the optimal number of each SMS to send
 
 #### Diagram
 
@@ -636,6 +771,7 @@ which logs the ID of the SMS and redirects the user to the app store.
 Step 4: Every morning, I download the server's logs and process it,
 and update my PostgreSQL database of which SMSes have been clicked,
 analysing which SMSes were the most effective.
+I also download customer data from the server to know which customers have downloaded/installed the app. (Tangent about ITT/TOT not really necessary)
 I wrote the Thompson sampling code that would read the data
 from the database (the slot machine labeled "MAB"). It calculates the optimal
 number of each SMS to send given the SMSes' past performances.
@@ -663,7 +799,10 @@ Should I use simple A/B testing, or a multi-armed bandit algorithm?
 And even between MABs,
 there are very many different bandit algorithms
 (UCB, epsilon-greedy, Thompson sampling).
-In the end I used Thompson sampling because of ...
+In the end I used Thompson sampling because of its best theoretical guarantees,
+and running a simulation gave the best results.
+But there's a caveat which is that Thompson sampling is not ideal
+with finite trial lengths.
 
 ### Interesting technical challenges?
 

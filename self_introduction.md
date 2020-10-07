@@ -7,6 +7,7 @@ I've always been incredibly interested in computer science and so I've done cour
 in algos and DS, computer architecture, functional programming
 and so on.
 
+There are two things I really enjoy about software engineering.
 Previously, I built an Electron app for a civil engineering firm
 which streamlined their building inspection process a lot.
 It saved about 300 engineer-hours a month.
@@ -19,9 +20,11 @@ messages.
 Seeing the number of active users increase day-by-day was really wonderful.
 
 I always have a backlog of new ideas and love building side projects.
-I'm currently building a real-time, multiplayer board game engine
-with TypeScript, React, and ExpressJS. The work OGP does aligns very well
-with my own desire to build things that matter and make users' lives better.
+I'm currently very excited to be building a real-time, multiplayer board game engine
+with TypeScript, React, and ExpressJS.
+
+I think The work OGP does aligns very well
+with my own desire to build things that matter that make users' lives better.
 
 ---
 
